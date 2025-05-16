@@ -13,3 +13,10 @@ scope = "leanprover-community"
 
 [[lean_lib]]
 name = "Untitled"
+
+[[require]]
+name = "LeanCopilot"
+git = "https://github.com/lean-dojo/LeanCopilot.git"
+rev = "v4.14.0"
+
+moreLinkArgs = ["-L./.lake/packages/LeanCopilot/.lake/build/lib", "-lctranslate2"]
