@@ -15,6 +15,7 @@ variable {l: Filter ℝ}
 variable (u : ℝ≥0 → Ω → ℕ) (f: ℝ → ℝ)
 
 
+-- 0. basic properties of counting process
 @[class] structure IsCountingProcess (u : ℝ≥0 → Ω → ℕ) : Prop where
   -- Measurable
   measurable_process : Measurable u
@@ -38,6 +39,7 @@ structure HasStationaryIncrements (μ : ProbabilityMeasure Ω) (u : ℝ≥0 → 
     ∀ n : ℕ, μ {ω | u t₂ ω - u t₁ ω = n} = μ {ω | u (t₂ + s) ω - u (t₁ + s) ω = n}
 
 
+-- Poisson process definition 1
 @[class] structure IsPoissonProcess1 (μ : ProbabilityMeasure Ω) (u : ℝ≥0 → Ω → ℕ) [IsCountingProcess u] (r : ℝ≥0) : Prop where
   i: u 0 = 0
   ii: HasIndpendentIncrements μ u
@@ -45,23 +47,16 @@ structure HasStationaryIncrements (μ : ProbabilityMeasure Ω) (u : ℝ≥0 → 
     ∀ n : ℕ, μ {ω | u t₂ ω - u t₁ ω = n} = poissonPMFReal (r * (t₂ - t₁)) n
 
 
--- noncomputable def pfiii (μ : ProbabilityMeasure Ω) (u : ℝ≥0 → Ω → ℕ) (r : ℝ≥0)
---   (h : ℝ≥0): ℝ :=
---   if h = 0 then 0 else (μ {ω | u h ω = 1} :ℝ) - ((r * h) :ℝ) / (h :ℝ)
-
-
+-- Poisson process definition 2
 @[class] structure IsPoissonProcess2 (μ : ProbabilityMeasure Ω) (u : ℝ≥0 → Ω → ℕ) [IsCountingProcess u] (r : ℝ≥0): Prop where
   i   : u 0 = 0
   ii  : HasIndpendentIncrements μ u ∧ HasStationaryIncrements μ u
   iii : ∃ f : ℝ → ℝ, (f =o[𝓝[>] 0] id) ∧ (∀ h : ℝ≥0, μ {ω | u h ω = 1} = (r * h : ℝ) + f h)
   iv  : ∃ f : ℝ → ℝ, (f =o[𝓝[>] 0] id) ∧ (∀ h : ℝ≥0, μ {ω | u h ω ≥ 2} = (f h))
 
+--1 The following section is to prove that poisson process definition 1 implies poisson process definition 2
 
-example (y : ℝ) (h1: ∀ x:ℝ, if x≥0 then x=y else x>y) :  ∀x:ℝ≥0, x=y:= by
-  intro x
-  simpa using h1 x
-
--- Poisson Process satisfies stationary increments
+--1.1 This section is to prove definition 1 implies definition 2.ii
 theorem poisson_process1_has_stationary_increments {μ : ProbabilityMeasure Ω} {u : ℝ≥0 → Ω → ℕ} [IsCountingProcess u] {r : ℝ≥0}
   (h1 : IsPoissonProcess1 μ u r) : HasStationaryIncrements μ u := by
   constructor
@@ -72,7 +67,10 @@ theorem poisson_process1_has_stationary_increments {μ : ProbabilityMeasure Ω} 
   apply NNReal.eq
   rw [h_t1_t2, h_t1s_t2s, this]
 
+--1.2 This section is to write the closed form of the probability density function of the Poisson process 1
+--    to be used in the proof of definition 2.iii and 2.iv
 
+-- Probability density of Poisson process 1 when no jumps
 theorem poisson_process1_zero_jump {μ : ProbabilityMeasure Ω} {u : ℝ≥0 → Ω → ℕ} [IsCountingProcess u] {r : ℝ≥0}
   (h1 : IsPoissonProcess1 μ u r) :
   ∀ h : ℝ≥0, μ {ω | u h ω = 0} = Real.exp (- (r * h)) := by
@@ -82,7 +80,7 @@ theorem poisson_process1_zero_jump {μ : ProbabilityMeasure Ω} {u : ℝ≥0 →
   simp [poissonPMFReal]
 
 
--- Poisson Process 1 has the single jump probability property
+-- Probability density of Poisson process 1 when single jump
 theorem poisson_process1_single_jump {μ : ProbabilityMeasure Ω} {u : ℝ≥0 → Ω → ℕ} [IsCountingProcess u] {r : ℝ≥0}
   (h1 : IsPoissonProcess1 μ u r) :
   ∀ h : ℝ≥0, μ {ω | u h ω = 1} = Real.exp (-r * h) * (r * h) := by
@@ -92,18 +90,13 @@ theorem poisson_process1_single_jump {μ : ProbabilityMeasure Ω} {u : ℝ≥0 �
   simp [poissonPMFReal]
 
 
-example (a b c: NNReal) (h : 1 = a + b + c): (1:ℝ) = a + b + c := by
-  have h_real : (1 : ℝ) = ↑(a + b + c) := by
-    rw [← NNReal.coe_one, h]
-  rw [h_real, NNReal.coe_add, NNReal.coe_add]
-
-
+-- helper theorem for probability measure used in the proof of poisson_process1_multiple_jump
 theorem probability_measure_union {μ : ProbabilityMeasure Ω} {A B : Set Ω} (hB : MeasurableSet B) (hAB : Disjoint A B) :
   μ (A ∪ B) = μ A + μ B := by
   refine ENNReal.coe_inj.mp ?_
   simpa using measure_union hAB hB
 
-
+-- Probability density of Poisson process 1 when multiple jumps
 theorem poisson_process1_multiple_jump {μ : ProbabilityMeasure Ω} {u : ℝ≥0 → Ω → ℕ} [IsCountingProcess u] {r : ℝ≥0}
   (h1 : IsPoissonProcess1 μ u r):
    ∀ h : ℝ≥0, μ {ω | u h ω ≥ 2} = (1:ℝ) - Real.exp (-(r * h)) * (r * h : ℝ) - Real.exp (-(r*h)) := by
@@ -162,10 +155,14 @@ theorem poisson_process1_multiple_jump {μ : ProbabilityMeasure Ω} {u : ℝ≥0
   ring_nf
 
 
+-- 1.3 This section is to actually prove that poisson process definition 1 implies poisson process definition 2
+--     for the 2.iii and 2.iv
 
+-- define the error term / little o term in definition 2.iii
 noncomputable def f2iii (r : ℝ≥0) (h : ℝ) : ℝ :=
   Real.exp (-r * h) * (r * h) - r * h
 
+-- proves that the error term in definition 2.iii is little o
 theorem f2iii_is_little_O (r : ℝ≥0) (hr: r > 0): (fun h : ℝ  => f2iii r h) =o[𝓝[>] 0] id := by
   have outer_isLittleO : (fun x : ℝ => Real.exp (-x) * x - x) =o[𝓝[>] 0] (fun x:ℝ => x) := by
     rw [isLittleO_iff]
@@ -212,6 +209,7 @@ theorem f2iii_is_little_O (r : ℝ≥0) (hr: r > 0): (fun h : ℝ  => f2iii r h)
   exact (isLittleO_const_mul_right_iff' (IsUnit.mk0 r.toReal (by positivity))).mp div_rh_isLittleO
 
 
+-- actually proves that poisson process definition 1 implies poisson process definition 2.iii
 theorem poisson_process1_implies_process2iii {μ : ProbabilityMeasure Ω} {u : ℝ≥0 → Ω → ℕ} [IsCountingProcess u] (r : ℝ≥0) (hr: r > 0)
   (h1 : IsPoissonProcess1 μ u r) :
   ∃ f : ℝ → ℝ, (f =o[𝓝[>] 0] id) ∧ (∀ h : ℝ≥0, μ {ω | u h ω = 1} = (r * h : ℝ) + f h) := by
@@ -225,19 +223,15 @@ theorem poisson_process1_implies_process2iii {μ : ProbabilityMeasure Ω} {u : �
     rw [poisson_process1_single_jump h1 h]
     simp
 
+-- helper theorem to be used in proof of error term in definition 2.iv is little o
 theorem sum_eq : ∀ x:ℝ, ∑ i ∈ Finset.range (1 + 1), x ^ i / ↑i.factorial = 1+x := by
   simp [Finset.sum_range_succ]
 
-example : (fun x : ℝ => Real.exp x - (1 + x)) =o[nhds 0] fun x => x := by
-  simpa [←sum_eq] using Real.exp_sub_sum_range_succ_isLittleO_pow 1
-
-
--- noncomputable def f2iv (r : ℝ≥0) (h : ℝ≥0) : ℝ :=
---   1 - poissonPMFReal (r * h) 0 - poissonPMFReal (r * h) 1
-
+-- define the error term / little o term in definition 2.iv
 noncomputable def f_zero (r : ℝ≥0) (h : ℝ) : ℝ :=
   Real.exp (-(r * h)) - (1 - r * h)
 
+-- proves that the error term in definition 2.iv is little o
 theorem f_zero_is_little_O (r : ℝ≥0) (hr: r > 0): (fun h : ℝ  => f_zero r h) =o[𝓝[>] 0] id := by
   have neg_id_tendsto : Tendsto (fun h : ℝ => -1 * h) (𝓝 0) (𝓝 0) := by
     simpa using (@tendsto_id ℝ (𝓝 0)).const_mul (-1 : ℝ)
@@ -272,18 +266,10 @@ theorem f_zero_is_little_O (r : ℝ≥0) (hr: r > 0): (fun h : ℝ  => f_zero r 
   simpa using ((isLittleO_const_mul_right_iff' (IsUnit.mk0 r.toReal (by positivity))).mp div_rh_isLittleO).mono (nhdsWithin_le_nhds)
 
 
-theorem zero_jump_littleO {μ : ProbabilityMeasure Ω} {u : ℝ≥0 → Ω → ℕ} [IsCountingProcess u] (r : ℝ≥0) (hr: r > 0)
-  (h1 : IsPoissonProcess1 μ u r) :
-  ∃ f : ℝ → ℝ, (f =o[𝓝[>] 0] id) ∧ ( ∀ h : ℝ≥0, μ {ω | u h ω =0} = 1 - r * h + (f h)) := by
-  use (fun h : ℝ => Real.exp (- (r * h)) - (1 - r*h))
-  constructor
-  . exact f_zero_is_little_O r hr
-  . simpa using poisson_process1_zero_jump h1
-
+-- actually proves that poisson process definition 1 implies poisson process definition 2.iv
 theorem poisson_process1_implies_process2iv {μ : ProbabilityMeasure Ω} {u : ℝ≥0 → Ω → ℕ} [IsCountingProcess u] (r : ℝ≥0) (hr: r > 0)
   (h1 : IsPoissonProcess1 μ u r) :
   ∃ f : ℝ → ℝ, (f =o[𝓝[>] 0] id) ∧ ( ∀ h : ℝ≥0, μ {ω | u h ω ≥ 2} = f h) := by
-  -- have h_multiple_jump := poisson_process1_multiple_jump h1
   use (fun h : ℝ => -1 * (f_zero r h + f2iii r h))
   constructor
   . exact ((f_zero_is_little_O r hr).add (f2iii_is_little_O r hr)).const_mul_left (-1)
@@ -292,6 +278,7 @@ theorem poisson_process1_implies_process2iv {μ : ProbabilityMeasure Ω} {u : �
     unfold f_zero f2iii
     simp only [neg_mul, one_mul, neg_add_rev, neg_sub]
     ring_nf
+
 
 -- Main equivalence theorem
 theorem poisson_process_equiv {μ : ProbabilityMeasure Ω} {u : ℝ≥0 → Ω → ℕ} [IsCountingProcess u] {r : ℝ≥0} {hr: r > 0}:
